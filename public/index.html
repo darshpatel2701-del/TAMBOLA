@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>KKP Youth Club Tambola</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+    }
+
+    header {
+      background: linear-gradient(90deg, #ff512f, #dd2476);
+      width: 100%;
+      padding: 20px;
+      font-size: 26px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    }
+
+    .card {
+      background: rgba(255,255,255,0.1);
+      border-radius: 15px;
+      padding: 30px 20px;
+      margin-top: 30px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: none;
+      font-size: 16px;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    button:hover {
+      opacity: 0.9;
+      transform: translateY(-2px);
+    }
+
+    .btn-host {
+      background: #4caf50;
+      color: #fff;
+    }
+
+    .btn-player {
+      background: #2196f3;
+      color: #fff;
+    }
+
+    .share-link {
+      margin-top: 15px;
+      word-break: break-all;
+      font-size: 14px;
+      background: rgba(255,255,255,0.15);
+      padding: 10px;
+      border-radius: 8px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <header>KKP YOUTH CLUB TAMBOLA</header>
+
+  <div class="card">
+    <h2>Start / Join Game</h2>
+    <input type="text" id="room" placeholder="Enter Room ID" />
+    <input type="text" id="name" placeholder="Enter Your Name" />
+    <button class="btn-host" id="hostBtn">Start as Host</button>
+    <button class="btn-player" id="playerBtn">Join as Player</button>
+    <div class="share-link" id="shareBox"></div>
+  </div>
+
+  <script>
+    const hostBtn = document.getElementById("hostBtn");
+    const playerBtn = document.getElementById("playerBtn");
+    const shareBox = document.getElementById("shareBox");
+
+    hostBtn.onclick = () => {
+      const room = document.getElementById("room").value.trim();
+      if (!room) {
+        alert("Please enter a Room ID!");
+        return;
+      }
+      const link = `${window.location.origin}/game.html?role=player&room=${room}`;
+      shareBox.style.display = "block";
+      shareBox.textContent = "Share this link with players: " + link;
+      // Redirect host to game
+      window.location.href = `game.html?role=host&room=${room}`;
+    };
+
+    playerBtn.onclick = () => {
+      const room = document.getElementById("room").value.trim();
+      const name = document.getElementById("name").value.trim();
+      if (!room || !name) {
+        alert("Please enter both Room ID and Name!");
+        return;
+      }
+      window.location.href = `game.html?role=player&room=${room}&name=${encodeURIComponent(name)}`;
+    };
+  </script>
+</body>
+</html>

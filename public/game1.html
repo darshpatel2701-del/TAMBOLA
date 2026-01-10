@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tambola Game</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; background: #f7f9fc; margin: 0; padding: 20px; }
+    h1 { background: #4a90e2; color: white; padding: 15px; border-radius: 10px; }
+    .ticket { display: grid; grid-template-columns: repeat(5, 60px); grid-gap: 5px; justify-content: center; margin: 20px auto; }
+    .cell { width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;
+            border-radius: 8px; background: #fff; border: 2px solid #ddd; cursor: pointer;
+            font-weight: bold; font-size: 18px; }
+    .cell.marked { background: #4a90e2; color: white; }
+    .draw-board { display: flex; flex-wrap: wrap; justify-content: center; margin: 20px auto; max-width: 350px; }
+    .number { width: 40px; height: 40px; margin: 4px; border-radius: 50%; display: flex;
+              align-items: center; justify-content: center; background: #eee; }
+    .number.drawn { background: #4a90e2; color: white; }
+    button { padding: 10px 20px; margin: 10px; border-radius: 8px; border: none; background: #4a90e2; color: white; font-size: 16px; cursor: pointer; }
+    button:hover { background: #357ab8; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h1>KKP YOUTH CLUB TAMBOLA</h1>
+  <div id="hostPanel" class="hidden">
+    <h2>Host Controls</h2>
+    <button onclick="drawNumber()">Draw Number</button>
+    <button onclick="endGame()">End Game</button>
+    <p>Share this link:</p>
+    <input type="text" id="shareLink" readonly style="width:80%;padding:8px;">
+  </div>
+
+  <div id="playerPanel" class="hidden">
+    <h2>Your Ticket</h2>
+    <div id="ticket" class="ticket"></div>
+  </div>
+
+  <h2>Drawn Numbers</h2>
+  <div id="drawBoard" class="draw-board"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const role = params.get("role");
+    const room = params.get("room");
+    const name = params.get("name");
+    const storageKey = `tambola_${room}_${name || "host"}`;
+
+    let state = JSON.parse(localStorage.getItem(storageKey)) || {
+      ticket: [], marked: []
+    };
+
+    function saveState() {
+      localStorage.setItem(storageKey, JSON.stringify(state));
+    }
+
+    function renderTicket(drawn=[]) {
+      const ticketDiv = document.getElementById("ticket");
+      ticketDiv.innerHTML = "";
+      state.ticket.forEach(num => {
+        const cell = document.createElement("div");
+        cell.className = "cell" + (state.marked.includes(num) ? " marked" : "");
+        cell.textContent = num;
+        if (drawn.includes(num)) {
+          cell.onclick = () => toggleMark(num, cell);
+        } else {
+          cell.style.opacity = "0.5";
+          cell.style.cursor = "not-allowed";
+        }
+        ticketDiv.appendChild(cell);
+      });
+    }
+
+    function toggleMark(num, cell) {
+      if (state.marked.includes(num)) {
+        state.marked = state.marked.filter(n => n !== num);
+        cell.classList.remove("marked");
+      } else {
+        state.marked.push(num);
+        cell.classList.add("marked");
+      }
+      saveState();
+    }
+
+    function renderDrawBoard(drawn=[]) {
+      const board = document.getElementById("drawBoard");
+      board.innerHTML = "";
+      for (let i = 1; i <= 90; i++) {
+        const div = document.createElement("div");
+        div.className = "number" + (drawn.includes(i) ? " drawn" : "");
+        div.textContent = i;
+        board.appendChild(div);
+      }
+    }
+
+    // SOCKET.IO
+    const socket = io();
+    socket.emit("joinRoom", { room, name, role });
+
+    socket.on("stateUpdate", (data) => {
+      renderDrawBoard(data.drawn);
+      if (role === "player") renderTicket(data.drawn);
+    });
+
+    socket.on("gameOver", () => {
+      alert("Game Over!");
+      localStorage.removeItem(storageKey);
+    });
+
+    function drawNumber() {
+      socket.emit("drawNumber", { room });
+    }
+    function endGame() {
+      socket.emit("endGame", { room });
+    }
+
+    function init() {
+      if (role === "host") {
+        document.getElementById("hostPanel").classList.remove("hidden");
+        const link = `${window.location.origin}/index.html?room=${room}`;
+        document.getElementById("shareLink").value = link;
+      } else {
+        document.getElementById("playerPanel").classList.remove("hidden");
+        if (state.ticket.length === 0) {
+          const nums = [];
+          while (nums.length < 15) {
+            let n = Math.floor(Math.random() * 90) + 1;
+            if (!nums.includes(n)) nums.push(n);
+          }
+          state.ticket = nums;
+          saveState();
+        }
+        renderTicket([]);
+      }
+      renderDrawBoard([]);
+    }
+    init();
+  </script>
+</body>
+</html>

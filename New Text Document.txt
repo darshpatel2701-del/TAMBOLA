@@ -1,1 +1,0 @@
-http://localhost:3000/game.html?role=host&room=123
