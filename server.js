@@ -9,22 +9,37 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, "public")));
 
-let rooms = {}; // { roomId: { drawnNumbers: [], players: {} } }
+let rooms = {}; // { roomId: { drawnNumbers: [], players: {}, host: socketId } }
 
 io.on("connection", (socket) => {
   console.log("New user connected:", socket.id);
 
   socket.on("joinRoom", ({ role, room, name }) => {
     socket.join(room);
-    if (!rooms[room]) rooms[room] = { drawnNumbers: [], players: {} };
-    if (role === "player") rooms[room].players[socket.id] = name;
+
+    if (!rooms[room]) {
+      rooms[room] = { drawnNumbers: [], players: {}, host: null };
+    }
+
+    if (role === "host") {
+      // If host already exists
+      if (rooms[room].host) {
+        socket.emit("hostExists", true);
+        return;
+      }
+      rooms[room].host = socket.id; // assign new host
+    }
+
+    if (role === "player") {
+      rooms[room].players[socket.id] = name;
+    }
 
     // Send current drawn numbers to new user
     socket.emit("numberUpdate", rooms[room].drawnNumbers);
   });
 
   socket.on("drawNumber", (room) => {
-    if (!rooms[room]) rooms[room] = { drawnNumbers: [], players: {} };
+    if (!rooms[room]) rooms[room] = { drawnNumbers: [], players: {}, host: null };
 
     let allNumbers = Array.from({ length: 90 }, (_, i) => i + 1);
     let remaining = allNumbers.filter(
@@ -36,7 +51,6 @@ io.on("connection", (socket) => {
     let num = remaining[Math.floor(Math.random() * remaining.length)];
     rooms[room].drawnNumbers.push(num);
 
-    // Send updated array to all players & host
     io.to(room).emit("numberUpdate", rooms[room].drawnNumbers);
   });
 
@@ -47,7 +61,12 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     for (let room in rooms) {
-      if (rooms[room].players[socket.id]) delete rooms[room].players[socket.id];
+      if (rooms[room].host === socket.id) {
+        rooms[room].host = null;
+      }
+      if (rooms[room].players[socket.id]) {
+        delete rooms[room].players[socket.id];
+      }
     }
   });
 });
